@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int     @id @default(autoincrement())
+  email     String  @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  financialRecords FinancialRecord[]
+}
+
+model FinancialRecord {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Revenue fields
+  revenueBilledRecurringMonthly    Float?
+  revenueBilledReceivedCash        Float?
+  revenueBilledReceivedBank        Float?
+  revenueBilledOutstandingCash     Float?
+  revenueBilledOutstandingBank     Float?
+  
+  // Till End fields
+  revenueTillEndReceivedCash       Float?
+  revenueTillEndReceivedBank       Float?
+  revenueTillEndOutstandingCash    Float?
+  revenueTillEndOutstandingBank    Float?
+  
+  // Expenditure fields
+  expenditureBudgetedCash          Float?
+  expenditureBudgetedBank          Float?
+  expenditureActualCash            Float?
+  expenditureActualBank            Float?
+  
+  // VAT fields
+  vatAccruedCash                   Float?
+  vatAccruedBank                   Float?
+  vatPaidCash                      Float?
+  vatPaidBank                      Float?
+  
+  // TDS fields
+  tdsIncomeCash                    Float?
+  tdsIncomeBank                    Float?
+  tdsExpenditureCash               Float?
+  tdsExpenditureBank               Float?
+  
+  month         String
+  year          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

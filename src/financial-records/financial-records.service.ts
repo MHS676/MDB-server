@@ -6,6 +6,28 @@ import { SaveRecordDto } from './dto/save-record.dto';
 export class FinancialRecordsService {
   constructor(private prisma: PrismaService) {}
 
+  private monthToNumber(month: string) {
+    return Number(month);
+  }
+
+  private isOnOrBeforePeriod(recordYear: string, recordMonth: string, year: string, month: string) {
+    const recordYearNumber = Number(recordYear);
+    const selectedYearNumber = Number(year);
+    const recordMonthNumber = this.monthToNumber(recordMonth);
+    const selectedMonthNumber = this.monthToNumber(month);
+
+    return recordYearNumber < selectedYearNumber || (
+      recordYearNumber === selectedYearNumber && recordMonthNumber <= selectedMonthNumber
+    );
+  }
+
+  private sumRecordValues(records: Array<Record<string, any>>, keys: string[]) {
+    return records.reduce((total, record) => {
+      const rowTotal = keys.reduce((rowSum, key) => rowSum + Number(record[key] || 0), 0);
+      return total + rowTotal;
+    }, 0);
+  }
+
   async upsertRecord(userId: number, dto: SaveRecordDto) {
     const { month, year, ...metrics } = dto;
 
@@ -36,6 +58,57 @@ export class FinancialRecordsService {
       where: { userId },
       orderBy: { year: 'desc' },
     });
+  }
+
+  async getExecutiveReport(userId: number, month: string, year: string) {
+    const allRecords = await this.prisma.financialRecord.findMany({
+      where: { userId },
+      orderBy: [{ year: 'asc' }, { month: 'asc' }],
+    });
+
+    const selectedRecord = await this.prisma.financialRecord.findFirst({
+      where: { userId, month, year },
+    });
+
+    const periodRecords = allRecords.filter((record) =>
+      this.isOnOrBeforePeriod(record.year, record.month, year, month),
+    );
+
+    const recurringMonthlyRevenueBilled = Number(selectedRecord?.revenueBilledRecurringMonthly || 0);
+    const outstandingRevenueBilled =
+      Number(selectedRecord?.revenueBilledOutstandingCash || 0) +
+      Number(selectedRecord?.revenueBilledOutstandingBank || 0);
+    const outstandingRevenueTillEnd =
+      Number(selectedRecord?.revenueTillEndOutstandingCash || 0) +
+      Number(selectedRecord?.revenueTillEndOutstandingBank || 0);
+    const totalReceivables = outstandingRevenueBilled + outstandingRevenueTillEnd;
+
+    const receivableReceivedTillDate = this.sumRecordValues(periodRecords, [
+      'revenueBilledReceivedCash',
+      'revenueBilledReceivedBank',
+      'revenueTillEndReceivedCash',
+      'revenueTillEndReceivedBank',
+    ]);
+
+    const totalLifetimeInvoiced = totalReceivables + receivableReceivedTillDate;
+    const receivableOutstandingTillDate = totalLifetimeInvoiced - receivableReceivedTillDate;
+
+    return {
+      period: { month, year },
+      metrics: {
+        recurringMonthlyRevenueBilled,
+        outstandingRevenueBilled,
+        totalReceivables,
+        receivableReceivedTillDate,
+        receivableOutstandingTillDate,
+      },
+      raw: {
+        totalLifetimeInvoiced,
+        totalLifetimeReceived: receivableReceivedTillDate,
+        recordCount: periodRecords.length,
+      },
+      selectedRecord,
+    };
   }
 
   async checkDataForAllMonths(userId: number) {

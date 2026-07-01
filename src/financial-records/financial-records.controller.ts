@@ -28,6 +28,15 @@ export class FinancialRecordsController {
     return this.recordsService.getAllRecords(userId);
   }
 
+  @Get('executive-report')
+  async getExecutiveReport(
+    @GetUser('id') userId: number,
+    @Query('month') month: string,
+    @Query('year') year: string,
+  ) {
+    return this.recordsService.getExecutiveReport(userId, month, year);
+  }
+
   @Get('check-data')
   async checkDataForAllMonths(@GetUser('id') userId: number) {
     return this.recordsService.checkDataForAllMonths(userId);

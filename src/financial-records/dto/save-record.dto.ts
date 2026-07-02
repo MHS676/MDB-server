@@ -20,6 +20,7 @@ export class SaveRecordDto {
   @IsOptional() @IsNumber() revenueTillEndReceivedBank?: number;
   @IsOptional() @IsNumber() revenueTillEndOutstandingCash?: number;
   @IsOptional() @IsNumber() revenueTillEndOutstandingBank?: number;
+  @IsOptional() revenueTillEndDailyBreakdown?: Record<string, any>[] | Record<string, any>;
 
   @IsOptional() @IsNumber() expenditureBudgetedCash?: number;
   @IsOptional() @IsNumber() expenditureBudgetedBank?: number;

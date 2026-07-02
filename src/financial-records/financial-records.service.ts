@@ -81,7 +81,7 @@ export class FinancialRecordsService {
     const outstandingRevenueTillEnd =
       Number(selectedRecord?.revenueTillEndOutstandingCash || 0) +
       Number(selectedRecord?.revenueTillEndOutstandingBank || 0);
-    const totalReceivables = outstandingRevenueBilled + outstandingRevenueTillEnd;
+    const receivableOutstandingTillDate = outstandingRevenueBilled + outstandingRevenueTillEnd;
 
     const receivableReceivedTillDate = this.sumRecordValues(periodRecords, [
       'revenueBilledReceivedCash',
@@ -90,8 +90,8 @@ export class FinancialRecordsService {
       'revenueTillEndReceivedBank',
     ]);
 
-    const totalLifetimeInvoiced = totalReceivables + receivableReceivedTillDate;
-    const receivableOutstandingTillDate = totalLifetimeInvoiced - receivableReceivedTillDate;
+    const totalReceivables = receivableReceivedTillDate + receivableOutstandingTillDate;
+    const totalLifetimeInvoiced = totalReceivables;
 
     return {
       period: { month, year },

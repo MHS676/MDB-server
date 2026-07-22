@@ -21,11 +21,10 @@ export class FinancialRecordsService {
     );
   }
 
-  private sumRecordValues(records: Array<Record<string, any>>, keys: string[]) {
-    return records.reduce((total, record) => {
-      const rowTotal = keys.reduce((rowSum, key) => rowSum + Number(record[key] || 0), 0);
-      return total + rowTotal;
-    }, 0);
+  private latestRecordWithValue(records: Array<Record<string, any>>, keys: string[]) {
+    return [...records].reverse().find((record) =>
+      keys.some((key) => Number(record[key] || 0) !== 0),
+    );
   }
 
   async upsertRecord(userId: number, dto: SaveRecordDto) {
@@ -74,24 +73,39 @@ export class FinancialRecordsService {
       this.isOnOrBeforePeriod(record.year, record.month, year, month),
     );
 
-    const recurringMonthlyRevenueBilled = Number(selectedRecord?.revenueBilledRecurringMonthly || 0);
-    const outstandingRevenueBilled =
-      Number(selectedRecord?.revenueBilledOutstandingCash || 0) +
-      Number(selectedRecord?.revenueBilledOutstandingBank || 0);
-    const outstandingRevenueTillEnd =
-      Number(selectedRecord?.revenueTillEndOutstandingCash || 0) +
-      Number(selectedRecord?.revenueTillEndOutstandingBank || 0);
-    const receivableOutstandingTillDate = outstandingRevenueBilled + outstandingRevenueTillEnd;
-
-    const receivableReceivedTillDate = this.sumRecordValues(periodRecords, [
-      'revenueBilledReceivedCash',
-      'revenueBilledReceivedBank',
-      'revenueTillEndReceivedCash',
-      'revenueTillEndReceivedBank',
+    // A July report can use June's recurring bill and May's carried balance,
+    // as in the agreed receivable calculation. Find the latest recurring bill
+    // available by the report date, then the latest outstanding bill before it.
+    const recurringRecord = this.latestRecordWithValue(periodRecords, [
+      'revenueBilledRecurringMonthly',
+    ]);
+    const recurringRecordIndex = recurringRecord
+      ? periodRecords.findIndex((record) => record.id === recurringRecord.id)
+      : periodRecords.length;
+    const outstandingRecord = this.latestRecordWithValue(
+      periodRecords.slice(0, recurringRecordIndex),
+      ['revenueBilledOutstandingCash', 'revenueBilledOutstandingBank'],
+    );
+    const receivedRecord = this.latestRecordWithValue(periodRecords, [
+      'revenueTillEndReceivedCash', 'revenueTillEndReceivedBank',
     ]);
 
-    const totalReceivables = receivableReceivedTillDate + receivableOutstandingTillDate;
-    const totalLifetimeInvoiced = totalReceivables;
+    const recurringMonthlyRevenueBilled = Number(recurringRecord?.revenueBilledRecurringMonthly || 0);
+    const outstandingRevenueBilled =
+      Number(outstandingRecord?.revenueBilledOutstandingCash || 0) +
+      Number(outstandingRecord?.revenueBilledOutstandingBank || 0);
+
+    // This is an absolute "till date" figure, not a monthly payment. Using
+    // only its latest value prevents cumulative figures from being added twice.
+    const receivableReceivedTillDate =
+      Number(receivedRecord?.revenueTillEndReceivedCash || 0) +
+      Number(receivedRecord?.revenueTillEndReceivedBank || 0);
+
+    // Accounts receivable is the amount billed in the reporting cycle plus
+    // the carried outstanding billed amount. The outstanding balance must be
+    // derived from that total, rather than from manually entered daily values.
+    const totalReceivables = recurringMonthlyRevenueBilled + outstandingRevenueBilled;
+    const receivableOutstandingTillDate = totalReceivables - receivableReceivedTillDate;
 
     return {
       period: { month, year },
@@ -103,9 +117,20 @@ export class FinancialRecordsService {
         receivableOutstandingTillDate,
       },
       raw: {
-        totalLifetimeInvoiced,
+        totalLifetimeInvoiced: totalReceivables,
         totalLifetimeReceived: receivableReceivedTillDate,
         recordCount: periodRecords.length,
+        sources: {
+          recurringMonthlyRevenueBilled: recurringRecord
+            ? { month: recurringRecord.month, year: recurringRecord.year }
+            : null,
+          outstandingRevenueBilled: outstandingRecord
+            ? { month: outstandingRecord.month, year: outstandingRecord.year }
+            : null,
+          receivableReceivedTillDate: receivedRecord
+            ? { month: receivedRecord.month, year: receivedRecord.year }
+            : null,
+        },
       },
       selectedRecord,
     };

@@ -6,6 +6,8 @@ export declare class FinancialRecordsService {
     private monthToNumber;
     private isOnOrBeforePeriod;
     private latestRecordWithValue;
+    private dailyEntries;
+    private validateDailyEntries;
     upsertRecord(userId: number, dto: SaveRecordDto): Promise<{
         id: number;
         createdAt: Date;
@@ -106,6 +108,8 @@ export declare class FinancialRecordsService {
             outstandingRevenueBilled: number;
             totalReceivables: number;
             receivableReceivedTillDate: number;
+            receivableReceivedCashTillDate: number;
+            receivableReceivedBankTillDate: number;
             receivableOutstandingTillDate: number;
         };
         raw: {

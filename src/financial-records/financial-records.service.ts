@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaveRecordDto } from './dto/save-record.dto';
 
@@ -27,8 +27,54 @@ export class FinancialRecordsService {
     );
   }
 
+  private dailyEntries(value: unknown) {
+    if (!Array.isArray(value)) return [];
+
+    return value.map((entry: any) => ({
+      date: entry?.date,
+      cash: Number(entry?.cash || 0),
+      bank: Number(entry?.bank || 0),
+    }));
+  }
+
+  private validateDailyEntries(value: unknown, month: string, year: string) {
+    if (!Array.isArray(value)) {
+      throw new BadRequestException('Daily receivable entries must be an array.');
+    }
+
+    const periodPrefix = `${year}-${String(Number(month)).padStart(2, '0')}-`;
+    const enteredDates = new Set<string>();
+    return value.map((entry: any, index) => {
+      const date = String(entry?.date || '');
+      const cash = Number(entry?.cash || 0);
+      const bank = Number(entry?.bank || 0);
+      const parsedDate = new Date(`${date}T00:00:00.000Z`);
+      const isValidDate = !Number.isNaN(parsedDate.getTime()) &&
+        parsedDate.toISOString().slice(0, 10) === date;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !date.startsWith(periodPrefix) || !isValidDate) {
+        throw new BadRequestException(`Daily entry ${index + 1} must be within the selected month.`);
+      }
+      if (enteredDates.has(date)) {
+        throw new BadRequestException(`Only one daily entry is allowed for ${date}.`);
+      }
+      enteredDates.add(date);
+      if (!Number.isFinite(cash) || !Number.isFinite(bank) || cash < 0 || bank < 0) {
+        throw new BadRequestException(`Daily entry ${index + 1} must contain valid cash and bank amounts.`);
+      }
+      return { date, cash, bank };
+    });
+  }
+
   async upsertRecord(userId: number, dto: SaveRecordDto) {
     const { month, year, ...metrics } = dto;
+
+    if (metrics.revenueTillEndDailyBreakdown !== undefined) {
+      const dailyEntries = this.validateDailyEntries(metrics.revenueTillEndDailyBreakdown, month, year);
+      metrics.revenueTillEndDailyBreakdown = dailyEntries;
+      // Keep the existing summary columns in sync for consumers that use them.
+      metrics.revenueTillEndReceivedCash = dailyEntries.reduce((sum, entry) => sum + entry.cash, 0);
+      metrics.revenueTillEndReceivedBank = dailyEntries.reduce((sum, entry) => sum + entry.bank, 0);
+    }
 
     const existing = await this.prisma.financialRecord.findFirst({
       where: { userId, month, year },
@@ -90,6 +136,26 @@ export class FinancialRecordsService {
       'revenueTillEndReceivedCash', 'revenueTillEndReceivedBank',
     ]);
 
+    const dailyRecords = periodRecords.filter((record) => Array.isArray(record.revenueTillEndDailyBreakdown));
+    const firstDailyRecordIndex = periodRecords.findIndex((record) => Array.isArray(record.revenueTillEndDailyBreakdown));
+    // Records created before daily entry support store a cumulative amount. Use
+    // the last such amount as the opening balance, then add new daily entries.
+    const legacyReceivedRecord = firstDailyRecordIndex === -1
+      ? receivedRecord
+      : this.latestRecordWithValue(periodRecords.slice(0, firstDailyRecordIndex), [
+        'revenueTillEndReceivedCash', 'revenueTillEndReceivedBank',
+      ]);
+    const dailyReceivedCash = dailyRecords.reduce(
+      (total, record) => total + this.dailyEntries(record.revenueTillEndDailyBreakdown)
+        .reduce((sum, entry) => sum + entry.cash, 0),
+      0,
+    );
+    const dailyReceivedBank = dailyRecords.reduce(
+      (total, record) => total + this.dailyEntries(record.revenueTillEndDailyBreakdown)
+        .reduce((sum, entry) => sum + entry.bank, 0),
+      0,
+    );
+
     const recurringMonthlyRevenueBilled = Number(recurringRecord?.revenueBilledRecurringMonthly || 0);
     const outstandingRevenueBilled =
       Number(outstandingRecord?.revenueBilledOutstandingCash || 0) +
@@ -97,9 +163,9 @@ export class FinancialRecordsService {
 
     // This is an absolute "till date" figure, not a monthly payment. Using
     // only its latest value prevents cumulative figures from being added twice.
-    const receivableReceivedTillDate =
-      Number(receivedRecord?.revenueTillEndReceivedCash || 0) +
-      Number(receivedRecord?.revenueTillEndReceivedBank || 0);
+    const receivableReceivedCashTillDate = Number(legacyReceivedRecord?.revenueTillEndReceivedCash || 0) + dailyReceivedCash;
+    const receivableReceivedBankTillDate = Number(legacyReceivedRecord?.revenueTillEndReceivedBank || 0) + dailyReceivedBank;
+    const receivableReceivedTillDate = receivableReceivedCashTillDate + receivableReceivedBankTillDate;
 
     // Accounts receivable is the amount billed in the reporting cycle plus
     // the carried outstanding billed amount. The outstanding balance must be
@@ -114,6 +180,8 @@ export class FinancialRecordsService {
         outstandingRevenueBilled,
         totalReceivables,
         receivableReceivedTillDate,
+        receivableReceivedCashTillDate,
+        receivableReceivedBankTillDate,
         receivableOutstandingTillDate,
       },
       raw: {
@@ -127,8 +195,8 @@ export class FinancialRecordsService {
           outstandingRevenueBilled: outstandingRecord
             ? { month: outstandingRecord.month, year: outstandingRecord.year }
             : null,
-          receivableReceivedTillDate: receivedRecord
-            ? { month: receivedRecord.month, year: receivedRecord.year }
+          receivableReceivedTillDate: legacyReceivedRecord
+            ? { month: legacyReceivedRecord.month, year: legacyReceivedRecord.year }
             : null,
         },
       },

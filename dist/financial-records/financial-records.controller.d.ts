@@ -103,6 +103,8 @@ export declare class FinancialRecordsController {
             outstandingRevenueBilled: number;
             totalReceivables: number;
             receivableReceivedTillDate: number;
+            receivableReceivedCashTillDate: number;
+            receivableReceivedBankTillDate: number;
             receivableOutstandingTillDate: number;
         };
         raw: {

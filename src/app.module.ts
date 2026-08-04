@@ -4,6 +4,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { FinancialRecordsModule } from './financial-records/financial-records.module';
+import { ExpendituresModule } from './expenditures/expenditures.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -13,6 +14,7 @@ import { AppController } from './app.controller';
     AuthModule,
     UsersModule,
     FinancialRecordsModule,
+    ExpendituresModule,
   ],
   controllers: [AppController],
 })

@@ -7,6 +7,13 @@ import { UpdateExpenditureDto } from './dto/update-expenditure.dto';
 export class ExpendituresService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // A record date is a calendar/business date, not a time. Store it at UTC
+  // midday so it cannot cross into an adjacent date when rendered worldwide.
+  private toBusinessDate(value: string) {
+    const dateOnly = value.slice(0, 10);
+    return new Date(`${dateOnly}T12:00:00.000Z`);
+  }
+
   async findAll() {
     return this.prisma.expenditure.findMany({
       orderBy: { date: 'desc' },
@@ -24,7 +31,7 @@ export class ExpendituresService {
   async create(dto: CreateExpenditureDto) {
     return this.prisma.expenditure.create({
       data: {
-        date: new Date(dto.date),
+        date: this.toBusinessDate(dto.date),
         totalEscort: dto.totalEscort ?? 0,
         coverVan: dto.coverVan ?? 0,
         receivedAmount: dto.receivedAmount ?? 0,
@@ -45,7 +52,7 @@ export class ExpendituresService {
     return this.prisma.expenditure.update({
       where: { id },
       data: {
-        ...(dto.date ? { date: new Date(dto.date) } : {}),
+        ...(dto.date ? { date: this.toBusinessDate(dto.date) } : {}),
         ...(dto.totalEscort !== undefined ? { totalEscort: dto.totalEscort } : {}),
         ...(dto.coverVan !== undefined ? { coverVan: dto.coverVan } : {}),
         ...(dto.receivedAmount !== undefined ? { receivedAmount: dto.receivedAmount } : {}),

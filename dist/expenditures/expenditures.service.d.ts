@@ -4,6 +4,7 @@ import { UpdateExpenditureDto } from './dto/update-expenditure.dto';
 export declare class ExpendituresService {
     private readonly prisma;
     constructor(prisma: PrismaService);
+    private toBusinessDate;
     findAll(): Promise<{
         expenditure: number;
         id: number;

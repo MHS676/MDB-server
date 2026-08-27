@@ -1,6 +1,7 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -9,9 +10,15 @@ export class AuthController {
   @Post('login')
   async login(@Body() dto: LoginDto) {
     const user = await this.authService.validateUser(dto);
+    return this.authService.login(user);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout() {
     return {
-      user,
-      token: 'mock-jwt-token-string-xyz-replace-with-real-jwt-sign',
+      success: true,
+      message: 'Logged out successfully',
     };
   }
 }

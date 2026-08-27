@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext } from '@nestjs/common';
-export declare class JwtAuthGuard implements CanActivate {
-    canActivate(context: ExecutionContext): boolean;
+declare const JwtAuthGuard_base: import("@nestjs/passport").Type<import("@nestjs/passport").IAuthGuard>;
+export declare class JwtAuthGuard extends JwtAuthGuard_base {
 }
+export {};

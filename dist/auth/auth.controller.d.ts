@@ -4,11 +4,15 @@ export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
     login(dto: LoginDto): Promise<{
+        access_token: string;
         user: {
-            id: number;
-            email: string;
-            name: string;
+            id: any;
+            email: any;
+            name: any;
         };
-        token: string;
+    }>;
+    logout(): Promise<{
+        success: boolean;
+        message: string;
     }>;
 }

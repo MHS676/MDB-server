@@ -8,17 +8,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JwtAuthGuard = void 0;
 const common_1 = require("@nestjs/common");
-let JwtAuthGuard = class JwtAuthGuard {
-    canActivate(context) {
-        const request = context.switchToHttp().getRequest();
-        const authHeader = request.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            throw new common_1.UnauthorizedException('Missing or invalid Authorization token format');
-        }
-        // Mock Payload decoding layer for instant plug-and-play testing
-        request.user = { id: 1, email: 'admin@falcon.com', name: 'Hasan' };
-        return true;
-    }
+const passport_1 = require("@nestjs/passport");
+let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
 };
 exports.JwtAuthGuard = JwtAuthGuard;
 exports.JwtAuthGuard = JwtAuthGuard = __decorate([

@@ -11,10 +11,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
+const jwt_1 = require("@nestjs/jwt");
 const users_service_1 = require("../users/users.service");
 let AuthService = class AuthService {
-    constructor(usersService) {
+    constructor(usersService, jwtService) {
         this.usersService = usersService;
+        this.jwtService = jwtService;
     }
     async validateUser(dto) {
         const user = await this.usersService.findByEmail(dto.email);
@@ -23,9 +25,17 @@ let AuthService = class AuthService {
         }
         throw new common_1.UnauthorizedException('Invalid security access credentials');
     }
+    async login(user) {
+        const payload = { email: user.email, sub: user.id, name: user.name };
+        return {
+            access_token: this.jwtService.sign(payload),
+            user: { id: user.id, email: user.email, name: user.name },
+        };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [users_service_1.UsersService])
+    __metadata("design:paramtypes", [users_service_1.UsersService,
+        jwt_1.JwtService])
 ], AuthService);

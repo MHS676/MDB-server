@@ -5,15 +5,16 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seed...');
 
-  // Create default user if doesn't exist
-  const user = await prisma.user.upsert({
-    where: { email: 'admin@falcon.com' },
-    update: {},
-    create: {
+  // Delete all existing users first to start fresh
+  await prisma.user.deleteMany({});
+
+  // Create default user
+  const user = await prisma.user.create({
+    data: {
       id: 1,
-      email: 'admin@falcon.com',
+      email: 'admin@falconsecurity.com',
       name: 'Admin User',
-      password: 'hashed_password_here',
+      password: 'FalconPassword123!',
     },
   });
 

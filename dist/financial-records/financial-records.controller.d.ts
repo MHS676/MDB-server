@@ -7,8 +7,8 @@ export declare class FinancialRecordsController {
         id: number;
         createdAt: Date;
         updatedAt: Date;
-        month: string;
         year: string;
+        month: string;
         revenueBilledRecurringMonthly: number | null;
         revenueBilledReceivedCash: number | null;
         revenueBilledReceivedBank: number | null;
@@ -37,8 +37,8 @@ export declare class FinancialRecordsController {
         id: number;
         createdAt: Date;
         updatedAt: Date;
-        month: string;
         year: string;
+        month: string;
         revenueBilledRecurringMonthly: number | null;
         revenueBilledReceivedCash: number | null;
         revenueBilledReceivedBank: number | null;
@@ -67,8 +67,8 @@ export declare class FinancialRecordsController {
         id: number;
         createdAt: Date;
         updatedAt: Date;
-        month: string;
         year: string;
+        month: string;
         revenueBilledRecurringMonthly: number | null;
         revenueBilledReceivedCash: number | null;
         revenueBilledReceivedBank: number | null;
@@ -130,8 +130,8 @@ export declare class FinancialRecordsController {
             id: number;
             createdAt: Date;
             updatedAt: Date;
-            month: string;
             year: string;
+            month: string;
             revenueBilledRecurringMonthly: number | null;
             revenueBilledReceivedCash: number | null;
             revenueBilledReceivedBank: number | null;

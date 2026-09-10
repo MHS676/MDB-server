@@ -1,7 +1,16 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
+import * as dotenv from 'dotenv';
 
-const prisma = new PrismaClient();
+dotenv.config();
+
+const connectionString = process.env.DATABASE_URL;
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🌱 Starting MDB-backend database seed...');
@@ -134,6 +143,9 @@ async function main() {
   } catch (error) {
     console.error('❌ Seed failed:', error);
     throw error;
+  } finally {
+    await prisma.$disconnect();
+    await pool.end();
   }
 }
 

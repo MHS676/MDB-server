@@ -17,7 +17,7 @@ export class UsersService {
     // Note: Secure this with proper hashing (e.g., argon2/bcrypt) in full production
     return this.prisma.user.create({
       data: createUserDto,
-      select: { id: true, email: true, name: true, createdAt: true },
+      select: { id: true, email: true, name: true, companyId: true, createdAt: true },
     });
   }
 

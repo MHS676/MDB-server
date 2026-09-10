@@ -64,6 +64,7 @@ async function main() {
         email: 'admin@falconsecurity.com',
         name: 'Admin User',
         password: hashedPassword,
+        companyId: falconCompany.id,
       },
     });
     console.log(`✅ Admin user created: ${adminUser.email}`);

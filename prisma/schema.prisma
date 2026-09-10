@@ -17,6 +17,7 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  users            User[]
   financialRecords FinancialRecord[]
 
   @@map("companies")
@@ -26,6 +27,8 @@ model User {
   email     String  @unique
   name      String
   password  String
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   

@@ -76,6 +76,16 @@ export class FinancialRecordsService {
       metrics.revenueTillEndReceivedBank = dailyEntries.reduce((sum, entry) => sum + entry.bank, 0);
     }
 
+    // Fetch user to get their companyId
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { companyId: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
     const existing = await this.prisma.financialRecord.findFirst({
       where: { userId, month, year },
     });
@@ -88,7 +98,7 @@ export class FinancialRecordsService {
     }
 
     return this.prisma.financialRecord.create({
-      data: { userId, month, year, ...metrics },
+      data: { userId, companyId: user.companyId, month, year, ...metrics },
     });
   }
 
